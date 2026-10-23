@@ -1,0 +1,62 @@
+{
+    "model_name": "HealthWiise Sleep Quality Estimator",
+    "version": "1.0.0",
+    "model_type": "RandomForestRegressor Pipeline (Scikit-Learn)",
+    "training_date": "2026-10-24",
+    "random_state": 42,
+    "target_variable": {
+        "name": "Quality of Sleep",
+        "description": "Subjective sleep quality score",
+        "scale": "1 to 10 (Survey Scale)"
+    },
+    "feature_schema": {
+        "numeric_features": [
+            "Age",
+            "Sleep Duration",
+            "Physical Activity Level",
+            "Stress Level",
+            "Heart Rate",
+            "Daily Steps",
+            "Systolic_BP",
+            "Diastolic_BP"
+        ],
+        "categorical_features": [
+            "Gender",
+            "Occupation",
+            "BMI Category"
+        ],
+        "all_ordered_features": [
+            "Age",
+            "Sleep Duration",
+            "Physical Activity Level",
+            "Stress Level",
+            "Heart Rate",
+            "Daily Steps",
+            "Systolic_BP",
+            "Diastolic_BP",
+            "Gender",
+            "Occupation",
+            "BMI Category"
+        ]
+    },
+    "evaluation_metrics": {
+        "test_mae": 0.0397,
+        "test_rmse": 0.1316,
+        "test_r2": 0.9885
+    },
+    "hyperparameters": {
+        "regressor__max_depth": 8,
+        "regressor__min_samples_leaf": 1,
+        "regressor__min_samples_split": 2,
+        "regressor__n_estimators": 50
+    },
+    "dataset_provenance": {
+        "source": "Sleep Health and Lifestyle Dataset",
+        "sample_size": 374,
+        "notes": "Non-clinical wellness exploratory dataset"
+    },
+    "usage_guidelines": {
+        "intended_use": "Wellness habit estimation and educational lifestyle insights.",
+        "prohibited_use": "Clinical diagnosis, medical evaluation, or treatment planning."
+    }
+}
