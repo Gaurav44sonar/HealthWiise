@@ -4048,4 +4048,317 @@ body {
         grid-template-columns: 1fr;
     }
 }
-
+
+
+/* ============================================================
+   AI SMART MEAL SCANNER STYLES
+   ============================================================ */
+.ai-scanner-card {
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdfc 100%);
+    border: 1.5px solid #d4e7df;
+    position: relative;
+    overflow: hidden;
+}
+
+.ai-scanner-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #10b981 0%, #06b6d4 50%, #3b82f6 100%);
+}
+
+.ai-scanner-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+.ai-scanner-icon-badge {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    color: #059669;
+    border: 1px solid #a7f3d0;
+}
+
+.ai-mode-toggle {
+    display: flex;
+    gap: 6px;
+    background: #f1f5f3;
+    padding: 4px;
+    border-radius: 12px;
+}
+
+.ai-mode-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px !important;
+    min-height: 32px !important;
+    font-size: 12.5px !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    border: none !important;
+    color: var(--muted) !important;
+    background: transparent !important;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ai-mode-btn.active {
+    background: #ffffff !important;
+    color: var(--text) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.ai-dropzone {
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
+    padding: 32px 20px;
+    text-align: center;
+    background: #f8faf9;
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.ai-dropzone:hover {
+    border-color: var(--primary);
+    background: #f0fdf9;
+}
+
+.ai-dropzone-icon {
+    color: var(--primary);
+    margin-bottom: 8px;
+}
+
+.ai-preview-container {
+    position: relative;
+    max-width: 320px;
+    margin: 0 auto;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.ai-meal-preview-img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+}
+
+.ai-remove-img-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    min-height: 28px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    background: rgba(0, 0, 0, 0.65) !important;
+    color: white !important;
+    display: grid;
+    place-items: center;
+    border: none !important;
+    cursor: pointer;
+}
+
+.ai-quick-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.ai-quick-pill {
+    min-height: 26px !important;
+    padding: 4px 10px !important;
+    font-size: 11.5px !important;
+    font-weight: 500 !important;
+    color: var(--text) !important;
+    background: #eef3f0 !important;
+    border: 1px solid #dce5e0 !important;
+    border-radius: 20px !important;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.ai-quick-pill:hover {
+    background: #dfece5 !important;
+}
+
+.ai-analyze-submit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    color: white !important;
+    padding: 10px 20px !important;
+    border-radius: 12px !important;
+    font-size: 13.5px !important;
+    font-weight: 700 !important;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+}
+
+.ai-spinner {
+    animation: ai-spin 1s linear infinite;
+}
+
+@keyframes ai-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.ai-result-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.ai-mealtype-tag {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.ai-health-score-pill {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+    padding: 6px 12px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.ai-macro-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 10px;
+    margin: 16px 0;
+}
+
+.ai-macro-box {
+    background: #f8faf9;
+    border: 1px solid #e2e8e4;
+    border-radius: 14px;
+    padding: 12px 14px;
+    text-align: center;
+}
+
+.ai-macro-box .macro-lbl {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.ai-macro-box .macro-val {
+    display: block;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+    margin: 4px 0 1px;
+}
+
+.ai-macro-box .macro-sub {
+    font-size: 11px;
+    color: var(--muted);
+}
+
+.ai-macro-box.cal {
+    background: #fff7ed;
+    border-color: #ffedd5;
+}
+
+.ai-macro-box.protein {
+    background: #eff6ff;
+    border-color: #dbeafe;
+}
+
+.ai-macro-box.carbs {
+    background: #f0fdf4;
+    border-color: #dcfce7;
+}
+
+.ai-macro-box.fat {
+    background: #fefce8;
+    border-color: #fef9c3;
+}
+
+.ai-items-section {
+    background: #fbfcfb;
+    border: 1px solid #e5ebe7;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin: 14px 0;
+}
+
+.ai-detected-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 13px;
+    border-bottom: 1px dashed #e5ebe7;
+}
+
+.ai-detected-item:last-child {
+    border-bottom: none;
+}
+
+.ai-dietitian-box {
+    display: flex;
+    gap: 10px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin: 14px 0;
+}
+
+.ai-result-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+}
+
+.ai-save-meal-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--primary) !important;
+    color: white !important;
+    font-weight: 700 !important;
+    padding: 8px 18px !important;
+    border-radius: 10px !important;
+}
