@@ -1,4 +1,8 @@
-import pytest
+import sys
+import os
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from app.services.ai_calorie_service import (
     load_calorie_model,
     predict_calorie_burn,
@@ -60,4 +64,12 @@ def test_calculate_met_fallback():
     assert cals > 200
     cals_walk = calculate_met_fallback("walking", 30, "light", 70.0)
     assert cals_walk < cals
+
+
+if __name__ == "__main__":
+    test_calorie_model_loading_and_metadata()
+    test_predict_calorie_burn_ml()
+    test_calculate_met_fallback()
+    print("All calorie model tests passed successfully!")
+
 
