@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
 import {
     Droplets,
-    ArrowLeft,
     Plus,
     RotateCw,
     Trophy,
@@ -15,6 +13,7 @@ import {
 
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import AppNavbar from "../components/AppNavbar";
 
 interface WaterEntry {
     id: string;
@@ -44,8 +43,6 @@ export default function Hydration() {
 
     const isWomens = user?.dashboard_type === "womens";
     const themeClass = isWomens ? "womens-theme" : "mens-theme";
-    const dashboardLink = isWomens ? "/womens/dashboard" : "/mens/dashboard";
-
     const [summary, setSummary] = useState<HydrationSummary | null>(null);
     const [entries, setEntries] = useState<WaterEntry[]>([]);
     const [totalWaterToday, setTotalWaterToday] = useState(0);
@@ -234,19 +231,9 @@ export default function Hydration() {
 
     return (
         <main className={`hydration-page ${themeClass}`}>
+            <AppNavbar theme={isWomens ? "womens" : "mens"} />
             <div className="hydration-container">
-                {/* Header Section */}
-                <header className="hydration-topbar">
-                    <div className="hydration-brand-group">
-                        <Link className="dashboard-brand" to={dashboardLink}>
-                            HealthWiise
-                        </Link>
-                    </div>
-
-                    <Link to={dashboardLink} className="hydration-back-link">
-                        <ArrowLeft size={16} /> Back to Dashboard
-                    </Link>
-                </header>
+                
 
                 <div className="hydration-title-section">
                     <p className="eyebrow">DAILY HYDRATION</p>

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
     Sparkles,
-    ArrowLeft,
     RotateCw,
     Droplets,
     Utensils,
@@ -17,6 +16,7 @@ import {
 
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import AppNavbar from "../components/AppNavbar";
 
 interface ScoreComponent {
     name: string;
@@ -123,8 +123,6 @@ export default function WellnessInsights() {
 
     const isWomens = user?.dashboard_type === "womens";
     const themeClass = isWomens ? "womens-theme" : "mens-theme";
-    const dashboardLink = isWomens ? "/womens/dashboard" : "/mens/dashboard";
-
     const [summary, setSummary] = useState<WellnessSummaryResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -204,19 +202,10 @@ export default function WellnessInsights() {
 
     return (
         <main className={`wellness-page ${themeClass}`}>
-            <div className="wellness-container">
-                {/* Header */}
-                <header className="wellness-topbar">
-                    <div className="hydration-brand-group">
-                        <Link className="dashboard-brand" to={dashboardLink}>
-                            HealthWiise
-                        </Link>
-                    </div>
+            <AppNavbar theme={isWomens ? "womens" : "mens"} />
 
-                    <Link to={dashboardLink} className="hydration-back-link">
-                        <ArrowLeft size={16} /> Back to Dashboard
-                    </Link>
-                </header>
+            <div className="wellness-container">
+                
 
                 <div className="wellness-title-section">
                     <p className="eyebrow">UNIFIED WELLNESS DASHBOARD</p>

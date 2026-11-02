@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import {
     Flower2,
-    ArrowLeft,
     RotateCw,
     Calendar as CalendarIcon,
     ChevronLeft,
@@ -19,7 +17,7 @@ import {
 } from "lucide-react";
 
 import api from "../services/api";
-import { useAuth } from "../context/AuthContext";
+import AppNavbar from "../components/AppNavbar";
 import CyclePredictionCard from "../components/CyclePredictionCard";
 
 type FlowLevel = "spotting" | "light" | "moderate" | "heavy";
@@ -134,7 +132,6 @@ function getTodayStr(): string {
 }
 
 export default function Cycle() {
-    const { user } = useAuth();
     const todayStr = getTodayStr();
 
     // Data States
@@ -171,8 +168,6 @@ export default function Cycle() {
 
     // Confirmation delete state
     const [deleteTarget, setDeleteTarget] = useState<{ type: "period" | "symptom"; id: string } | null>(null);
-
-    const backDashboardPath = user?.dashboard_type === "mens" ? "/mens/dashboard" : "/womens/dashboard";
 
     const fetchAllData = useCallback(async () => {
         setLoading(true);
@@ -460,29 +455,7 @@ export default function Cycle() {
 
     return (
         <main className="dashboard-page womens-theme cycle-page">
-            {/* Top Navigation */}
-            <header className="dashboard-header">
-                <div className="header-left">
-                    <Link to={backDashboardPath} className="back-link">
-                        <ArrowLeft className="icon-small" />
-                        <span>Back to Dashboard</span>
-                    </Link>
-                </div>
-                <Link className="dashboard-brand" to={backDashboardPath}>
-                    HealthWiise
-                </Link>
-                <div className="header-actions">
-                    <button
-                        className="secondary-button refresh-btn"
-                        onClick={fetchAllData}
-                        disabled={loading}
-                        aria-label="Refresh cycle records"
-                    >
-                        <RotateCw className={loading ? "spin-icon" : ""} />
-                        <span>Refresh</span>
-                    </button>
-                </div>
-            </header>
+            <AppNavbar theme="womens" />
 
             <div className="cycle-container">
                 {/* Hero Header */}
@@ -503,6 +476,15 @@ export default function Cycle() {
                         <button className="primary-button add-period-hero-btn" onClick={() => openAddPeriodModal()}>
                             <Plus className="icon-small" />
                             <span>Log Period</span>
+                        </button>
+                        <button
+                            className="secondary-button refresh-btn"
+                            onClick={fetchAllData}
+                            disabled={loading}
+                            aria-label="Refresh cycle records"
+                        >
+                            <RotateCw className={loading ? "spin-icon" : ""} size={16} />
+                            <span>Refresh</span>
                         </button>
                         <button className="secondary-button" onClick={() => openSymptomModal(selectedDate)}>
                             <Smile className="icon-small" />

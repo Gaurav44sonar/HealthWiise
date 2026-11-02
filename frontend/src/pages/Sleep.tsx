@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
 import {
     Moon,
-    ArrowLeft,
     Clock,
     Sparkles,
     Star,
@@ -18,6 +16,7 @@ import {
 
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import AppNavbar from "../components/AppNavbar";
 import AISleepInsightsCard from "../components/AISleepInsightsCard";
 import type { AISleepInsightsResponse } from "../types/aiSleep";
 
@@ -66,8 +65,6 @@ export default function Sleep() {
 
     const isWomens = user?.dashboard_type === "womens";
     const themeClass = isWomens ? "womens-theme" : "mens-theme";
-    const dashboardLink = isWomens ? "/womens/dashboard" : "/mens/dashboard";
-
     const [summary, setSummary] = useState<SleepSummaryResponse | null>(null);
     const [aiInsights, setAiInsights] = useState<AISleepInsightsResponse | null>(null);
     const [loading, setLoading] = useState(true);
@@ -369,19 +366,10 @@ export default function Sleep() {
 
     return (
         <main className={`sleep-page ${themeClass}`}>
-            <div className="sleep-container">
-                {/* Header */}
-                <header className="sleep-topbar">
-                    <div className="hydration-brand-group">
-                        <Link className="dashboard-brand" to={dashboardLink}>
-                            HealthWiise
-                        </Link>
-                    </div>
+            <AppNavbar theme={isWomens ? "womens" : "mens"} />
 
-                    <Link to={dashboardLink} className="hydration-back-link">
-                        <ArrowLeft size={16} /> Back to Dashboard
-                    </Link>
-                </header>
+            <div className="sleep-container">
+                
 
                 <div className="sleep-title-section">
                     <p className="eyebrow">REST &amp; RECOVERY</p>

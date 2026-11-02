@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { ArrowLeft, CalendarDays, Dumbbell, Loader2, Sparkles, Utensils } from "lucide-react";
+import { CalendarDays, Dumbbell, Loader2, Sparkles, Utensils } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import AppNavbar from "../components/AppNavbar";
 
 interface PlanRequest {
     goal: string;
@@ -54,8 +54,6 @@ export default function WeeklyPlan() {
     const { user } = useAuth();
     const isWomens = user?.dashboard_type === "womens";
     const themeClass = isWomens ? "womens-theme" : "mens-theme";
-    const homePath = isWomens ? "/womens/dashboard" : "/mens/dashboard";
-
     const [form, setForm] = useState<PlanRequest>({
         goal: "stay_fit",
         workout_days: 4,
@@ -102,14 +100,7 @@ export default function WeeklyPlan() {
 
     return (
         <main className={`dashboard-page ${themeClass}`}>
-            <header className="dashboard-header">
-                <Link className="dashboard-brand" to={homePath}>
-                    HealthWiise
-                </Link>
-                <Link className="secondary-button" to={homePath}>
-                    <ArrowLeft size={16} /> Back
-                </Link>
-            </header>
+            <AppNavbar theme={themeClass === "womens-theme" ? "womens" : "mens"} />
 
             <section className="dashboard-content">
                 <p className="eyebrow">AI WEEKLY PLAN</p>

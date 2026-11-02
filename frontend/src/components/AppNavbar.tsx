@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
+    LayoutDashboard,
     Dumbbell,
     Utensils,
     Droplets,
@@ -16,7 +17,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 
 interface AppNavbarProps {
-    theme: "mens" | "womens";
+    theme?: "mens" | "womens";
 }
 
 export default function AppNavbar({ theme }: AppNavbarProps) {
@@ -24,33 +25,45 @@ export default function AppNavbar({ theme }: AppNavbarProps) {
     const location = useLocation();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    const isWomens = theme === "womens";
+    const isWomens = theme ? theme === "womens" : user?.dashboard_type === "womens";
+    const activeTheme: "mens" | "womens" = isWomens ? "womens" : "mens";
     const homePath = isWomens ? "/womens/dashboard" : "/mens/dashboard";
 
     const navLinks = [
+        {
+            to: homePath,
+            label: "Dashboard",
+            icon: LayoutDashboard,
+            activeMatch: homePath,
+            exact: true,
+        },
         {
             to: "/shared/fitness",
             label: "Fitness",
             icon: Dumbbell,
             activeMatch: "/shared/fitness",
+            exact: false,
         },
         {
             to: "/shared/nutrition",
             label: "Nutrition",
             icon: Utensils,
             activeMatch: "/shared/nutrition",
+            exact: false,
         },
         {
             to: "/shared/hydration",
             label: "Hydration",
             icon: Droplets,
             activeMatch: "/shared/hydration",
+            exact: false,
         },
         {
             to: "/shared/sleep",
             label: "Sleep",
             icon: Moon,
             activeMatch: "/shared/sleep",
+            exact: false,
         },
         ...(isWomens
             ? [
@@ -59,6 +72,7 @@ export default function AppNavbar({ theme }: AppNavbarProps) {
                       label: "Cycle",
                       icon: Flower2,
                       activeMatch: "/shared/cycle",
+                      exact: false,
                   },
               ]
             : []),
@@ -67,12 +81,14 @@ export default function AppNavbar({ theme }: AppNavbarProps) {
             label: "Insights",
             icon: Sparkles,
             activeMatch: "/shared/wellness",
+            exact: false,
         },
         {
             to: "/shared/plan",
             label: "AI Plan",
             icon: CalendarDays,
             activeMatch: "/shared/plan",
+            exact: false,
         },
     ];
 
@@ -86,11 +102,11 @@ export default function AppNavbar({ theme }: AppNavbarProps) {
     };
 
     return (
-        <header className={`app-navbar ${theme}-theme`}>
+        <header className={`app-navbar ${activeTheme}-theme`}>
             <div className="app-navbar-container">
                 {/* Brand / Logo */}
                 <div className="app-navbar-brand-section">
-                    <Link to={homePath} className="app-navbar-brand">
+                    <Link to={homePath} className="app-navbar-brand" title="Go to Dashboard">
                         <div className="app-navbar-logo-bubble">
                             <HeartPulse size={18} />
                         </div>
@@ -105,14 +121,16 @@ export default function AppNavbar({ theme }: AppNavbarProps) {
                 <nav className="app-navbar-links" aria-label="Main Navigation">
                     {navLinks.map((link) => {
                         const Icon = link.icon;
-                        const isActive = location.pathname.startsWith(link.activeMatch);
+                        const isActive = link.exact
+                            ? location.pathname === link.activeMatch
+                            : location.pathname.startsWith(link.activeMatch);
                         return (
                             <Link
                                 key={link.to}
                                 to={link.to}
                                 className={`app-navbar-link ${isActive ? "active" : ""}`}
                             >
-                                <Icon size={16} />
+                                <Icon size={15} />
                                 <span>{link.label}</span>
                             </Link>
                         );
@@ -162,7 +180,7 @@ export default function AppNavbar({ theme }: AppNavbarProps) {
                             {getInitials(user?.name)}
                         </div>
                         <div>
-                            <strong>{user?.name}</strong>
+                            <strong>{user?.name || "Member"}</strong>
                             <p style={{ margin: 0, fontSize: 12, color: "var(--muted)" }}>
                                 {user?.email}
                             </p>
@@ -172,7 +190,9 @@ export default function AppNavbar({ theme }: AppNavbarProps) {
                     <div className="app-navbar-mobile-links">
                         {navLinks.map((link) => {
                             const Icon = link.icon;
-                            const isActive = location.pathname.startsWith(link.activeMatch);
+                            const isActive = link.exact
+                                ? location.pathname === link.activeMatch
+                                : location.pathname.startsWith(link.activeMatch);
                             return (
                                 <Link
                                     key={link.to}

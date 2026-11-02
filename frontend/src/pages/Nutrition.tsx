@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import api from "../services/api";
 import AIMealScannerCard from "../components/AIMealScannerCard";
+import AppNavbar from "../components/AppNavbar";
+import { useAuth } from "../context/AuthContext";
 
 type Meal = {
     id: string;
@@ -31,6 +33,7 @@ type Summary = {
 };
 
 export default function Nutrition() {
+    const { user } = useAuth();
     const [summary, setSummary] = useState<Summary | null>(null);
     const [meals, setMeals] = useState<Meal[]>([]);
 
@@ -212,9 +215,12 @@ export default function Nutrition() {
 
     if (loading) {
         return (
-            <main className="nutrition-page">
-                <p className="nutrition-muted">Loading your wellness data...</p>
-            </main>
+            <div className={`nutrition-page-wrapper ${user?.dashboard_type === "womens" ? "womens-theme" : "mens-theme"}`}>
+                <AppNavbar />
+                <main className="nutrition-page">
+                    <p className="nutrition-muted">Loading your wellness data...</p>
+                </main>
+            </div>
         );
     }
 
@@ -222,7 +228,9 @@ export default function Nutrition() {
     const nutrition = summary?.nutrition;
 
     return (
-        <main className="nutrition-page">
+        <div className={`nutrition-page-wrapper ${user?.dashboard_type === "womens" ? "womens-theme" : "mens-theme"}`}>
+            <AppNavbar />
+            <main className="nutrition-page">
             <header className="nutrition-heading">
                 <div>
                     <span className="nutrition-eyebrow">YOUR DAILY WELLNESS</span>
@@ -488,5 +496,6 @@ export default function Nutrition() {
                 )}
             </section>
         </main>
+        </div>
     );
 }
