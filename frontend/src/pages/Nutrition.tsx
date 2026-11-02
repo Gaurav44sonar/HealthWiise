@@ -208,29 +208,7 @@ export default function Nutrition() {
         }
     }
 
-    function handleFillFromScanner(scanned: {
-        name: string;
-        meal_type: string;
-        calories: number;
-        protein_g: number;
-        carbs_g: number;
-        fat_g: number;
-    }) {
-        setMealName(scanned.name);
-        setMealType(scanned.meal_type);
-        setCalories(String(scanned.calories));
-        setProtein(String(scanned.protein_g));
-        setCarbs(String(scanned.carbs_g));
-        setFat(String(scanned.fat_g));
-        setMessage(`AI Scanned meal "${scanned.name}" loaded into the form below.`);
-        const element = document.getElementById("manual-meal-form");
-        if (element) {
-            element.scrollIntoView({ behavior: "smooth" });
-        }
-        } finally {
-            setSaving(false);
-        }
-    }
+
 
     if (loading) {
         return (
@@ -473,12 +451,7 @@ export default function Nutrition() {
                 </form>
             </section>
 
-            <AIMealScannerCard
-                onFillForm={handleFillFromScanner}
-                onMealLogged={loadData}
-            />
-
-            <section id="manual-meal-form" className="nutrition-card nutrition-meal-section">
+            <section className="nutrition-card nutrition-meal-section">
                 <h2>Today's meals</h2>
 
                 {meals.length === 0 ? (
