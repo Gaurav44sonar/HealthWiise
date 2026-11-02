@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.dependencies import get_current_user
 from app.db.database import database
+from app.services.cycle_prediction_service import predict_next_cycle
 from app.schemas.cycle import (
     PeriodCreate,
     PeriodUpdate,
@@ -510,3 +511,29 @@ async def get_cycle_summary(
             "and natural variation is expected."
         ),
     }
+
+
+@router.get("/ml-prediction")
+async def get_ml_cycle_prediction(
+    current_user: dict = Depends(get_current_user),
+):
+    """ML prediction of next period, ovulation and fertile window from logged cycles."""
+    user_id = str(current_user["_id"])
+    periods = await periods_collection.find({"user_id": user_id}).sort("start_date", 1).to_list(length=500)
+
+    if not periods:
+        return {"has_prediction": False, "reason": "Log your first period to start predictions."}
+
+    starts = [parse_date(p["start_date"]) for p in periods]
+    lengths = [
+        (b - a).days for a, b in zip(starts, starts[1:]) if 15 <= (b - a).days <= 90
+    ]
+    durations = [
+        (parse_date(p["end_date"]) - parse_date(p["start_date"])).days + 1
+        for p in periods
+        if p.get("end_date")
+    ]
+    avg_period = sum(durations) / len(durations) if durations else None
+
+    result = predict_next_cycle(lengths, starts[-1], avg_period)
+    return {"has_prediction": True, "cycle_lengths": lengths, **result}

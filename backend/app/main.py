@@ -19,8 +19,10 @@ from app.db.database import (
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
-        await check_database_connection()
-        print("MongoDB connected successfully")
+        if await check_database_connection():
+            print("MongoDB connected successfully")
+        else:
+            print("WARNING: MongoDB is NOT connected - check MONGODB_URL in backend/.env and Atlas network access")
         yield
     finally:
         await close_database_connection()
@@ -61,15 +63,13 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    try:
-        await check_database_connection()
-        return {
-            "status": "healthy",
-            "application": "HealthWiise",
-            "database": "connected",
-        }
-    except Exception:
+    if not await check_database_connection():
         raise HTTPException(
             status_code=503,
             detail="Database unavailable",
         )
+    return {
+        "status": "healthy",
+        "application": "HealthWiise",
+        "database": "connected",
+    }

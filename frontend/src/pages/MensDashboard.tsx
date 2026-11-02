@@ -1,7 +1,9 @@
 
 import { Link } from "react-router-dom";
-import { Dumbbell, Droplets, Moon, Utensils, Sparkles } from "lucide-react";
+import { Dumbbell, Droplets, Moon, Utensils, Sparkles, CalendarDays } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import AICoachChat from "../components/AICoachChat";
+import AnomalyAlertsCard from "../components/AnomalyAlertsCard";
 export default function MensDashboard() {
     const { user, logout } = useAuth();
 
@@ -22,6 +24,8 @@ export default function MensDashboard() {
                 <p className="muted">
                     Build healthy routines, track your progress and take time to recover.
                 </p>
+
+                <AnomalyAlertsCard />
 
                 <div className="feature-grid">
                     <Link to="/shared/fitness" className="feature-card">
@@ -53,6 +57,12 @@ export default function MensDashboard() {
                         <h2>Wellness Insights</h2>
                         <p>Unified habits, goals, weekly trends and cross-service insights.</p>
                     </Link>
+
+                    <Link to="/shared/plan" className="feature-card">
+                        <CalendarDays />
+                        <h2>AI Weekly Plan</h2>
+                        <p>Personalised 7-day workout and meal plan.</p>
+                    </Link>
                 </div>
 
                 <section className="dashboard-panel">
@@ -63,6 +73,8 @@ export default function MensDashboard() {
                     </p>
                 </section>
             </section>
+
+            <AICoachChat />
         </main>
     );
 }

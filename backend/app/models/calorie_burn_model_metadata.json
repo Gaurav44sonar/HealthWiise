@@ -1,0 +1,36 @@
+{
+  "model_name": "HealthWiise Calorie Burn Estimator",
+  "version": "1.0.0",
+  "model_type": "GradientBoostingRegressor Pipeline",
+  "data_source": "Gym Members Exercise Dataset (gym_members_exercise_tracking.csv)",
+  "trained_at": "2026-11-02T19:50:50.051876+00:00",
+  "n_rows": 973,
+  "numeric_features": [
+    "age",
+    "weight_kg",
+    "height_cm",
+    "duration_min",
+    "intensity_ratio"
+  ],
+  "categorical_features": [
+    "gender",
+    "workout_type"
+  ],
+  "workout_types": [
+    "Cardio",
+    "HIIT",
+    "Strength",
+    "Yoga"
+  ],
+  "intensity_ratio_map": {
+    "light": 0.727,
+    "moderate": 0.796,
+    "vigorous": 0.87
+  },
+  "test_metrics": {
+    "mae_kcal": 41.74,
+    "r2": 0.9599,
+    "baseline_linear_mae_kcal": 51.31,
+    "baseline_linear_r2": 0.94
+  }
+}

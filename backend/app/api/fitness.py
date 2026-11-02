@@ -5,7 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.dependencies import get_current_user
 from app.db.database import database
-from app.schemas.fitness import WorkoutCreate, WorkoutUpdate, FitnessGoalsUpdate
+from app.schemas.fitness import (
+    WorkoutCreate,
+    WorkoutUpdate,
+    FitnessGoalsUpdate,
+    CalorieBurnEstimateRequest,
+    CalorieBurnEstimateResponse,
+)
+from app.services.ai_calorie_service import predict_calorie_burn
 
 router = APIRouter(prefix="/fitness", tags=["Fitness & Activity"])
 
@@ -52,6 +59,7 @@ def serialize_workout(item: dict) -> dict:
         "start_time": item.get("start_time"),
         "duration_minutes": item.get("duration_minutes", 0),
         "intensity": item.get("intensity"),
+        "calories_burned": item.get("calories_burned"),
         "notes": item.get("notes"),
         "created_at": format_dt(item.get("created_at")),
         "updated_at": format_dt(item.get("updated_at")),
@@ -146,6 +154,22 @@ async def create_workout(
     data: WorkoutCreate,
     user: dict = Depends(get_current_user),
 ):
+    calories_burned = data.calories_burned
+    if calories_burned is None:
+        try:
+            pred = predict_calorie_burn(
+                category=data.category,
+                duration_minutes=data.duration_minutes,
+                intensity=data.intensity or "moderate",
+                gender="Female" if user.get("dashboard_type") == "womens" else "Male",
+                age=user.get("age") or user.get("profile", {}).get("age", 30),
+                weight_kg=user.get("weight_kg") or user.get("profile", {}).get("weight_kg"),
+                height_cm=user.get("height_cm") or user.get("profile", {}).get("height_cm"),
+            )
+            calories_burned = pred.get("calories_burned", 0)
+        except Exception:
+            calories_burned = None
+
     workout = {
         **user_filter(user),
         "name": data.name.strip(),
@@ -154,6 +178,7 @@ async def create_workout(
         "start_time": data.start_time,
         "duration_minutes": data.duration_minutes,
         "intensity": data.intensity,
+        "calories_burned": calories_burned,
         "notes": data.notes.strip() if data.notes else None,
         "created_at": utc_now(),
         "updated_at": utc_now(),
@@ -258,6 +283,25 @@ async def update_workout(
         update_fields["duration_minutes"] = data.duration_minutes
     if data.intensity is not None:
         update_fields["intensity"] = data.intensity
+    if data.calories_burned is not None:
+        update_fields["calories_burned"] = data.calories_burned
+    elif data.duration_minutes is not None or data.category is not None or data.intensity is not None:
+        eff_cat = data.category if data.category is not None else existing.get("category", "cardio")
+        eff_dur = data.duration_minutes if data.duration_minutes is not None else existing.get("duration_minutes", 45)
+        eff_int = data.intensity if data.intensity is not None else existing.get("intensity", "moderate")
+        try:
+            pred = predict_calorie_burn(
+                category=eff_cat,
+                duration_minutes=eff_dur,
+                intensity=eff_int or "moderate",
+                gender="Female" if user.get("dashboard_type") == "womens" else "Male",
+                age=user.get("age") or user.get("profile", {}).get("age", 30),
+                weight_kg=user.get("weight_kg") or user.get("profile", {}).get("weight_kg"),
+                height_cm=user.get("height_cm") or user.get("profile", {}).get("height_cm"),
+            )
+            update_fields["calories_burned"] = pred.get("calories_burned", 0)
+        except Exception:
+            pass
     if data.notes is not None:
         update_fields["notes"] = data.notes.strip() if data.notes else None
 
@@ -333,6 +377,38 @@ async def update_fitness_goals(
     }
 
 
+@router.post(
+    "/estimate-calories",
+    response_model=CalorieBurnEstimateResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def estimate_workout_calories(
+    data: CalorieBurnEstimateRequest,
+    user: dict = Depends(get_current_user),
+):
+    """
+    Estimate calories burned using the trained Machine Learning GradientBoosting model
+    (Kaggle Gym Members Exercise Dataset).
+    """
+    eff_gender = data.gender or ("Female" if user.get("dashboard_type") == "womens" else "Male")
+    eff_age = data.age or user.get("age") or user.get("profile", {}).get("age", 30)
+    eff_weight = data.weight_kg or user.get("weight_kg") or user.get("profile", {}).get("weight_kg")
+    eff_height = data.height_cm or user.get("height_cm") or user.get("profile", {}).get("height_cm")
+
+    pred = predict_calorie_burn(
+        category=data.category,
+        duration_minutes=data.duration_minutes,
+        intensity=data.intensity,
+        age=eff_age,
+        gender=eff_gender,
+        weight_kg=eff_weight,
+        height_cm=eff_height,
+        avg_bpm=data.avg_bpm,
+        max_bpm=data.max_bpm,
+    )
+    return pred
+
+
 @router.get("/summary")
 async def get_fitness_summary(
     user: dict = Depends(get_current_user),
@@ -372,10 +448,13 @@ async def get_fitness_summary(
     daily_remaining = max(daily_goal - today_minutes, 0)
     daily_pct = round(min((today_minutes / daily_goal) * 100, 100), 1) if daily_goal > 0 else 0.0
 
+    today_calories = sum(w.get("calories_burned", 0) or 0 for w in today_workouts)
+
     today_summary = {
         "date": today_str,
         "total_minutes_today": today_minutes,
         "session_count_today": today_sessions,
+        "total_calories_burned_today": today_calories,
         "daily_goal_minutes": daily_goal,
         "daily_progress_percentage": daily_pct,
         "daily_remaining_minutes": daily_remaining,
@@ -435,19 +514,30 @@ async def get_fitness_summary(
         d_str = d.isoformat()
         day_workouts = [w for w in weekly_workouts if w.get("workout_date") == d_str]
         d_mins = sum(w.get("duration_minutes", 0) for w in day_workouts)
+        d_cals = sum(w.get("calories_burned", 0) or 0 for w in day_workouts)
         daily_history.append({
             "date": d_str,
             "day_name": d.strftime("%a"),
             "minutes": d_mins,
+            "calories_burned": d_cals,
             "session_count": len(day_workouts),
             "goal_reached": d_mins >= daily_goal,
         })
+
+    total_weekly_calories = sum(w.get("calories_burned", 0) or 0 for w in weekly_workouts)
+    avg_calories_per_session = (
+        round(total_weekly_calories / total_weekly_sessions)
+        if total_weekly_sessions > 0
+        else 0
+    )
 
     weekly_analytics = {
         "start_date": start_date_str,
         "end_date": today_str,
         "total_minutes": total_weekly_minutes,
         "total_hours": round(total_weekly_minutes / 60, 1),
+        "total_calories_burned": total_weekly_calories,
+        "avg_calories_burned_per_session": avg_calories_per_session,
         "session_count": total_weekly_sessions,
         "avg_duration_minutes": avg_duration,
         "sessions_goal": weekly_sessions_goal,

@@ -1,0 +1,26 @@
+{
+  "model_name": "HealthWiise Cycle Length Predictor",
+  "version": "1.0.0",
+  "model_type": "GradientBoostingRegressor",
+  "data_source": "FedCycleData (FedCycleData.csv)",
+  "trained_at": "2026-11-02T19:14:50.962247+00:00",
+  "n_users": 159,
+  "n_training_rows": 1358,
+  "features": [
+    "lag1",
+    "lag2",
+    "lag3",
+    "mean_all",
+    "std_all",
+    "mean_last3",
+    "trend",
+    "n_cycles"
+  ],
+  "median_luteal_phase_days": 13.0,
+  "test_metrics": {
+    "mae_days": 2.051,
+    "baseline_mean_mae_days": 2.059,
+    "within_3_days": 0.804,
+    "p80_abs_error_days": 2.99
+  }
+}

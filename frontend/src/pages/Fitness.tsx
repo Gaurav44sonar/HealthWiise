@@ -46,6 +46,7 @@ interface Workout {
     start_time: string | null;
     duration_minutes: number;
     intensity: WorkoutIntensity | null;
+    calories_burned?: number | null;
     notes: string | null;
     created_at: string;
 }
@@ -60,6 +61,7 @@ interface TodaySummary {
     date: string;
     total_minutes_today: number;
     session_count_today: number;
+    total_calories_burned_today?: number;
     daily_goal_minutes: number;
     daily_progress_percentage: number;
     daily_remaining_minutes: number;
@@ -79,6 +81,7 @@ interface DailyChartItem {
     date: string;
     day_name: string;
     minutes: number;
+    calories_burned?: number;
     session_count: number;
     goal_reached: boolean;
 }
@@ -88,6 +91,8 @@ interface WeeklyAnalytics {
     end_date: string;
     total_minutes: number;
     total_hours: number;
+    total_calories_burned?: number;
+    avg_calories_burned_per_session?: number;
     session_count: number;
     avg_duration_minutes: number;
     sessions_goal: number;
@@ -158,7 +163,44 @@ export default function Fitness() {
     const [startTime, setStartTime] = useState("");
     const [durationMinutes, setDurationMinutes] = useState("45");
     const [intensity, setIntensity] = useState<WorkoutIntensity | null>("moderate");
+    const [caloriesBurned, setCaloriesBurned] = useState<string>("");
+    const [mlEstimate, setMlEstimate] = useState<number | null>(null);
+    const [isEstimatingCal, setIsEstimatingCal] = useState<boolean>(false);
     const [notes, setNotes] = useState("");
+
+    // Live AI Calorie Burn Estimation from Kaggle Gym Dataset Model
+    useEffect(() => {
+        let active = true;
+        const dur = parseInt(durationMinutes, 10);
+        if (isNaN(dur) || dur < 1) {
+            setMlEstimate(null);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            setIsEstimatingCal(true);
+            try {
+                const res = await api.post<{ calories_burned: number }>("/api/fitness/estimate-calories", {
+                    category,
+                    duration_minutes: dur,
+                    intensity: intensity || "moderate",
+                });
+                if (active) {
+                    setMlEstimate(res.data.calories_burned);
+                    setCaloriesBurned((prev) => (prev === "" ? String(res.data.calories_burned) : prev));
+                }
+            } catch {
+                // Ignore background estimation failure
+            } finally {
+                if (active) setIsEstimatingCal(false);
+            }
+        }, 200);
+
+        return () => {
+            active = false;
+            clearTimeout(timer);
+        };
+    }, [category, durationMinutes, intensity]);
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -266,6 +308,7 @@ export default function Fitness() {
         setStartTime(w.start_time || "");
         setDurationMinutes(String(w.duration_minutes));
         setIntensity(w.intensity);
+        setCaloriesBurned(w.calories_burned ? String(w.calories_burned) : "");
         setNotes(w.notes || "");
         window.scrollTo({ top: 350, behavior: "smooth" });
     }
@@ -278,6 +321,7 @@ export default function Fitness() {
         setStartTime("");
         setDurationMinutes("45");
         setIntensity("moderate");
+        setCaloriesBurned("");
         setNotes("");
     }
 
@@ -300,6 +344,8 @@ export default function Fitness() {
         setError("");
         setMessage("");
 
+        const parsedCals = caloriesBurned.trim() ? parseInt(caloriesBurned, 10) : undefined;
+
         const payload = {
             name: workoutName.trim(),
             category,
@@ -307,6 +353,7 @@ export default function Fitness() {
             start_time: startTime.trim() || null,
             duration_minutes: dur,
             intensity,
+            calories_burned: isNaN(parsedCals as number) ? (mlEstimate ?? undefined) : parsedCals,
             notes: notes.trim() || null,
         };
 
@@ -517,6 +564,27 @@ export default function Fitness() {
                                             {today?.daily_remaining_minutes ?? 0} mins remaining to meet today's goal
                                         </p>
                                     )}
+
+                                    {/* Today's Dual Metric Grid: Active Mins + Calories Burned */}
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 14 }}>
+                                        <div className="fitness-goal-tile" style={{ padding: 12 }}>
+                                            <div className="fitness-goal-title">Active Time</div>
+                                            <div className="fitness-goal-val" style={{ fontSize: 20 }}>
+                                                {today?.total_minutes_today ?? 0} <small>mins</small>
+                                            </div>
+                                            <div className="fitness-goal-status">Goal: {today?.daily_goal_minutes ?? 45}m</div>
+                                        </div>
+
+                                        <div className="fitness-goal-tile" style={{ padding: 12 }}>
+                                            <div className="fitness-goal-title" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                                <Flame size={14} style={{ color: "#ea580c" }} /> Calorie Burn
+                                            </div>
+                                            <div className="fitness-goal-val" style={{ fontSize: 20, color: "#ea580c" }}>
+                                                {(today?.total_calories_burned_today ?? 0).toLocaleString()} <small>kcal</small>
+                                            </div>
+                                            <div className="fitness-goal-status">AI Estimated</div>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
 
@@ -668,6 +736,14 @@ export default function Fitness() {
                                     <div className="sleep-metric-title">Weekly Goal</div>
                                     <div className="sleep-metric-val">{weekly?.minutes_progress_percentage ?? 0}%</div>
                                     <div className="sleep-metric-hint">Target progress</div>
+                                </div>
+
+                                <div className="sleep-metric-tile">
+                                    <div className="sleep-metric-title">Energy Burned</div>
+                                    <div className="sleep-metric-val" style={{ color: "#ea580c" }}>
+                                        {(weekly?.total_calories_burned ?? 0).toLocaleString()} <small style={{ fontSize: 13 }}>kcal</small>
+                                    </div>
+                                    <div className="sleep-metric-hint">~{weekly?.avg_calories_burned_per_session ?? 0} kcal/sess</div>
                                 </div>
                             </div>
 
@@ -863,6 +939,59 @@ export default function Fitness() {
                                     </div>
                                 </div>
 
+                                {/* AI Calorie Burn Estimator Box */}
+                                <div className="fitness-calorie-estimate-card">
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                            <div className="fitness-cal-flame-bubble">
+                                                <Flame size={18} />
+                                            </div>
+                                            <div>
+                                                <strong style={{ fontSize: 13.5, color: "var(--text)" }}>AI Calorie Burn Estimator</strong>
+                                                <div style={{ fontSize: 11.5, color: "var(--muted)" }}>
+                                                    {isEstimatingCal ? "Computing with ML..." : "Gym Exercise Dataset (GradientBoosting R²: 0.96)"}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div style={{ textAlign: "right" }}>
+                                            <span style={{ fontSize: 22, fontWeight: 800, color: "#ea580c" }}>
+                                                {mlEstimate ? `~${mlEstimate}` : "—"}
+                                            </span>
+                                            <small style={{ fontSize: 13, marginLeft: 3, fontWeight: 700, color: "var(--muted)" }}>kcal</small>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+                                        <div style={{ flex: 1 }}>
+                                            <label htmlFor="calories-burned" style={{ fontSize: 12, fontWeight: 650, color: "var(--muted)", marginBottom: 4, display: "block" }}>
+                                                Calories Burned (kcal)
+                                            </label>
+                                            <input
+                                                id="calories-burned"
+                                                type="number"
+                                                min="0"
+                                                max="10000"
+                                                className="sleep-input"
+                                                style={{ padding: "8px 12px" }}
+                                                value={caloriesBurned}
+                                                onChange={(e) => setCaloriesBurned(e.target.value)}
+                                                placeholder={mlEstimate ? String(mlEstimate) : "e.g. 450"}
+                                                disabled={saving}
+                                            />
+                                        </div>
+                                        {mlEstimate !== null && caloriesBurned !== String(mlEstimate) && (
+                                            <button
+                                                type="button"
+                                                className="hydration-secondary-btn"
+                                                style={{ alignSelf: "flex-end", fontSize: 12, padding: "8px 12px", whiteSpace: "nowrap" }}
+                                                onClick={() => setCaloriesBurned(String(mlEstimate))}
+                                            >
+                                                Use ML ({mlEstimate})
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
                                 <div className="sleep-form-group">
                                     <label htmlFor="workout-notes">Workout Notes &amp; Highlights (Optional)</label>
                                     <textarea
@@ -959,6 +1088,21 @@ export default function Fitness() {
                                                         </p>
                                                         <div className="fitness-history-tags">
                                                             <span className="sleep-badge">{w.category_label}</span>
+                                                            {w.calories_burned ? (
+                                                                <span
+                                                                    className="sleep-badge"
+                                                                    style={{
+                                                                        color: "#ea580c",
+                                                                        fontWeight: 750,
+                                                                        display: "inline-flex",
+                                                                        alignItems: "center",
+                                                                        gap: 4,
+                                                                    }}
+                                                                >
+                                                                    <Flame size={12} />
+                                                                    {w.calories_burned} kcal
+                                                                </span>
+                                                            ) : null}
                                                             {w.intensity && (
                                                                 <span
                                                                     className="sleep-badge"

@@ -106,7 +106,7 @@ export default function Sleep() {
         try {
             const [summaryRes, aiRes] = await Promise.allSettled([
                 api.get<SleepSummaryResponse>("/api/sleep/summary"),
-                api.get<AISleepInsightsResponse>("/api/ai/sleep-insights"),
+                api.get<AISleepInsightsResponse>("/api/ai/sleep-insights", { timeout: 30000 }),
             ]);
 
             if (summaryRes.status === "fulfilled") {
@@ -145,7 +145,7 @@ export default function Sleep() {
             try {
                 const [summaryRes, aiRes] = await Promise.allSettled([
                     api.get<SleepSummaryResponse>("/api/sleep/summary"),
-                    api.get<AISleepInsightsResponse>("/api/ai/sleep-insights"),
+                    api.get<AISleepInsightsResponse>("/api/ai/sleep-insights", { timeout: 30000 }),
                 ]);
 
                 if (!active) return;
@@ -156,6 +156,8 @@ export default function Sleep() {
                 }
                 if (aiRes.status === "fulfilled") {
                     setAiInsights(aiRes.value.data);
+                } else {
+                    setAiError("Unable to load AI sleep insights. Please retry.");
                 }
             } catch {
                 if (!active) return;

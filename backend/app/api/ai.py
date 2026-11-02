@@ -1,3 +1,5 @@
+import hashlib
+import json
 from datetime import datetime, timezone, timedelta
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -20,14 +22,23 @@ from app.services.ai_sleep_service import (
     generate_rule_recommendations,
 )
 from app.services.gemini_sleep_recommender import generate_gemini_sleep_recommendations
+from app.services.anomaly_service import detect_anomalies
+from app.schemas.ai_plan import PlanRequest, PlanResponse
+from app.services.gemini_plan_service import generate_plan
+from app.schemas.ai_coach import CoachChatRequest, CoachChatResponse
+from app.services.gemini_coach_service import collect_user_data, chat_with_coach
 from app.schemas.ai_nutrition import MealScanRequest, MealScanResponse
 from app.services.gemini_nutrition_service import scan_meal_with_gemini
+from app.schemas.fitness import CalorieBurnEstimateRequest, CalorieBurnEstimateResponse
+from app.services.ai_calorie_service import predict_calorie_burn
 
 router = APIRouter(prefix="/ai", tags=["AI & Machine Learning Insights"])
 
 sleep_collection = database["sleep_records"]
 users_collection = database["users"]
 workouts_collection = database["workout_entries"]
+sleep_insights_collection = database["sleep_insights"]
+plans_collection = database["ai_plans"]
 
 
 def user_filter(user: dict) -> dict:
@@ -91,6 +102,88 @@ async def scan_meal_endpoint(
         )
 
 
+@router.post(
+    "/coach/chat",
+    response_model=CoachChatResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def coach_chat_endpoint(
+    payload: CoachChatRequest,
+    user: dict = Depends(get_current_user),
+):
+    """AI wellness coach: answers using the user's last 30 days of sleep, water, workouts and meals."""
+    data = await collect_user_data(database, user)
+    reply, used_ai = await chat_with_coach(
+        data, payload.message, [m.model_dump() for m in payload.history]
+    )
+    return {"reply": reply, "used_ai": used_ai, "data_summary": data}
+
+
+def _plan_doc_to_response(doc: dict | None) -> dict:
+    if not doc or not doc.get("days"):
+        return {"has_plan": False}
+    return {
+        "has_plan": True,
+        "used_ai": doc.get("used_ai", False),
+        "generated_at": doc["generated_at"].isoformat() if doc.get("generated_at") else None,
+        "request": doc.get("request"),
+        "summary": doc.get("summary", ""),
+        "days": doc["days"],
+    }
+
+
+@router.get("/plan", response_model=PlanResponse)
+async def get_saved_plan(user: dict = Depends(get_current_user)):
+    """Return the user's saved weekly workout & meal plan (no Gemini call)."""
+    return _plan_doc_to_response(await plans_collection.find_one(user_filter(user)))
+
+
+@router.post("/plan/generate", response_model=PlanResponse)
+async def generate_weekly_plan(
+    payload: PlanRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Generate a 7-day workout & meal plan from the user's goals and last 30 days of data, then save it."""
+    data = await collect_user_data(database, user)
+    plan, used_ai = await generate_plan(payload, data)
+    doc = {
+        "request": payload.model_dump(),
+        "summary": plan["summary"],
+        "days": plan["days"],
+        "used_ai": used_ai,
+        "generated_at": datetime.now(timezone.utc),
+    }
+    await plans_collection.update_one(user_filter(user), {"$set": doc}, upsert=True)
+    return _plan_doc_to_response(doc)
+
+
+@router.get("/anomalies")
+async def get_anomaly_alerts(user: dict = Depends(get_current_user)):
+    """Detect unusual recent drops in sleep, water and activity versus the user's own history."""
+    today = datetime.now().date()
+    since_day = (today - timedelta(days=32)).isoformat()
+    since_dt = datetime.now(timezone.utc) - timedelta(days=33)
+    uid = user_filter(user)
+
+    sleep = await sleep_collection.find({**uid, "sleep_date": {"$gte": since_day}}).to_list(length=100)
+    workouts = await workouts_collection.find({**uid, "workout_date": {"$gte": since_day}}).to_list(length=300)
+    water = await database["water_entries"].find({**uid, "recorded_at": {"$gte": since_dt}}).to_list(length=3000)
+
+    daily: dict = {"sleep": {}, "water": {}, "activity": {}}
+    for r in sleep:
+        d = datetime.strptime(r["sleep_date"], "%Y-%m-%d").date()
+        daily["sleep"][d] = daily["sleep"].get(d, 0.0) + r.get("sleep_duration_minutes", 0) / 60.0
+    for w in workouts:
+        d = datetime.strptime(w["workout_date"], "%Y-%m-%d").date()
+        daily["activity"][d] = daily["activity"].get(d, 0.0) + float(w.get("duration_minutes", 0))
+    for e in water:
+        rec = e["recorded_at"]
+        d = rec.date() if hasattr(rec, "date") else datetime.fromisoformat(str(rec)).date()
+        daily["water"][d] = daily["water"].get(d, 0.0) + float(e.get("amount_ml", 0))
+
+    return detect_anomalies(daily, today)
+
+
 @router.get(
     "/sleep-insights",
     response_model=AISleepInsightsResponse,
@@ -108,6 +201,7 @@ async def get_ai_sleep_insights(
     sleep_duration: float | None = Query(default=None, ge=3.0, le=14.0),
     occupation: str | None = Query(default=None, max_length=100),
     bmi_category: str | None = Query(default=None),
+    refresh: bool = Query(default=False),
 ):
     """
     Unified AI Sleep Insights combining:
@@ -265,17 +359,51 @@ async def get_ai_sleep_insights(
         except Exception:
             prediction_result = None
 
-    # 6. AI-Generated Personalized Recommendations (Gemini 2.5 Flash + ML + MongoDB Sleep History)
-    recommendations = await generate_gemini_sleep_recommendations(
-        user=user,
-        goal_minutes=goal_minutes,
-        analytics_7d=analytics_7d,
-        analytics_30d=analytics_30d,
-        consistency=consistency,
-        trend=duration_trend,
-        prediction=prediction_result,
-        recent_records=records,
-    )
+    # 6. AI-Generated Personalized Recommendations, persisted per user in MongoDB.
+    # Reused until the underlying sleep data / goal / ML score changes (or refresh=true).
+    signature = hashlib.sha256(
+        json.dumps(
+            {
+                "records": [
+                    [str(r.get("_id")), r.get("sleep_duration_minutes"), r.get("quality"), r.get("sleep_efficiency")]
+                    for r in records
+                ],
+                "goal": goal_minutes,
+                "score": (prediction_result or {}).get("estimated_sleep_quality"),
+            },
+            sort_keys=True,
+            default=str,
+        ).encode()
+    ).hexdigest()
+
+    recommendations = None
+    if not refresh:
+        stored = await sleep_insights_collection.find_one(user_filter(user))
+        if stored and stored.get("signature") == signature and stored.get("recommendations"):
+            recommendations = stored["recommendations"]
+
+    if recommendations is None:
+        recommendations = await generate_gemini_sleep_recommendations(
+            user=user,
+            goal_minutes=goal_minutes,
+            analytics_7d=analytics_7d,
+            analytics_30d=analytics_30d,
+            consistency=consistency,
+            trend=duration_trend,
+            prediction=prediction_result,
+            recent_records=records,
+        )
+        await sleep_insights_collection.update_one(
+            user_filter(user),
+            {
+                "$set": {
+                    "recommendations": recommendations,
+                    "signature": signature,
+                    "generated_at": datetime.now(timezone.utc),
+                }
+            },
+            upsert=True,
+        )
 
     return {
         "model_available": model_available,
@@ -293,3 +421,34 @@ async def get_ai_sleep_insights(
             "and machine-learning estimations. It is purely educational and does not constitute medical diagnosis or clinical treatment."
         ),
     }
+
+
+@router.post(
+    "/fitness/calorie-burn",
+    response_model=CalorieBurnEstimateResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def ai_fitness_calorie_burn(
+    data: CalorieBurnEstimateRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    ML Calorie Burn Estimator trained on Kaggle Gym Members Exercise Tracking dataset.
+    """
+    eff_gender = data.gender or ("Female" if current_user.get("dashboard_type") == "womens" else "Male")
+    eff_age = data.age or current_user.get("age") or current_user.get("profile", {}).get("age", 30)
+    eff_weight = data.weight_kg or current_user.get("weight_kg") or current_user.get("profile", {}).get("weight_kg")
+    eff_height = data.height_cm or current_user.get("height_cm") or current_user.get("profile", {}).get("height_cm")
+
+    pred = predict_calorie_burn(
+        category=data.category,
+        duration_minutes=data.duration_minutes,
+        intensity=data.intensity,
+        age=eff_age,
+        gender=eff_gender,
+        weight_kg=eff_weight,
+        height_cm=eff_height,
+        avg_bpm=data.avg_bpm,
+        max_bpm=data.max_bpm,
+    )
+    return pred

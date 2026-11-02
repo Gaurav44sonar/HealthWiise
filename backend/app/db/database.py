@@ -31,7 +31,7 @@ else:
     try:
         client = AsyncMongoClient(
             MONGODB_URL,
-            serverSelectionTimeoutMS=2000,
+            serverSelectionTimeoutMS=5000,
         )
         database = client[DATABASE_NAME]
     except Exception as exc:
@@ -44,7 +44,7 @@ async def check_database_connection():
     if client is None or IS_TESTING:
         return False
     try:
-        await asyncio.wait_for(client.admin.command("ping"), timeout=1.5)
+        await asyncio.wait_for(client.admin.command("ping"), timeout=5)
         return True
     except Exception as exc:
         logger.warning("MongoDB ping failed or offline: %s", exc)

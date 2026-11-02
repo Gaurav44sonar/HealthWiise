@@ -20,6 +20,7 @@ import {
 
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import CyclePredictionCard from "../components/CyclePredictionCard";
 
 type FlowLevel = "spotting" | "light" | "moderate" | "heavy";
 type SymptomSeverity = "mild" | "moderate" | "severe";
@@ -509,6 +510,8 @@ export default function Cycle() {
                         </button>
                     </div>
                 </section>
+
+                <CyclePredictionCard refreshKey={periods.length} />
 
                 {/* Error Banner */}
                 {error && (

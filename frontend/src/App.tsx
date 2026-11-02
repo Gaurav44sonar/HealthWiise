@@ -16,6 +16,7 @@ import Sleep from "./pages/Sleep";
 import Fitness from "./pages/Fitness";
 import WellnessInsights from "./pages/WellnessInsights";
 import Cycle from "./pages/Cycle";
+import WeeklyPlan from "./pages/WeeklyPlan";
 
 import "./styles.css";
 
@@ -39,6 +40,7 @@ function App() {
             <Route path="/shared/wellness" element={<WellnessInsights />} />
             <Route path="/shared/insights" element={<Navigate to="/shared/wellness" replace />} />
             <Route path="/shared/cycle" element={<Cycle />} />
+            <Route path="/shared/plan" element={<WeeklyPlan />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -331,7 +331,7 @@ Generate exactly 4 personalized, highly practical, non-generic sleep recommendat
         try:
             data = None
             if httpx is not None:
-                async with httpx.AsyncClient(timeout=20.0) as client:
+                async with httpx.AsyncClient(timeout=8.0) as client:
                     res = await client.post(url, json=payload)
                     if res.status_code == 200:
                         data = res.json()
@@ -346,7 +346,7 @@ Generate exactly 4 personalized, highly practical, non-generic sleep recommendat
                         headers={"Content-Type": "application/json"},
                         method="POST",
                     )
-                    with urllib.request.urlopen(req, timeout=20) as response:
+                    with urllib.request.urlopen(req, timeout=8) as response:
                         return json.loads(response.read().decode("utf-8"))
 
                 data = await asyncio.to_thread(_urllib_post)
