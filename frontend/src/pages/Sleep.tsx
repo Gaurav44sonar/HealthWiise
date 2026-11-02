@@ -401,6 +401,71 @@ export default function Sleep() {
                     </div>
                 )}
 
+                {/* Top Executive KPI Metric Cards */}
+                <div className="sleep-kpi-grid">
+                    <div className="sleep-kpi-card">
+                        <div className="sleep-kpi-icon-wrap duration">
+                            <Moon size={22} />
+                        </div>
+                        <div className="sleep-kpi-info">
+                            <span className="sleep-kpi-label">Last Night's Sleep</span>
+                            <div className="sleep-kpi-val">
+                                {formatDuration(latestDuration)}
+                            </div>
+                            <span className="sleep-kpi-sub">
+                                {latestDuration >= goalMins
+                                    ? "Target Reached 🎉 (100%)"
+                                    : `Goal: ${formatDuration(goalMins)} (${goalPercentage}%)`}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="sleep-kpi-card">
+                        <div className="sleep-kpi-icon-wrap efficiency">
+                            <Activity size={22} />
+                        </div>
+                        <div className="sleep-kpi-info">
+                            <span className="sleep-kpi-label">Sleep Efficiency</span>
+                            <div className="sleep-kpi-val efficiency-val">
+                                {latest?.sleep_efficiency ?? 0}%
+                            </div>
+                            <span className="sleep-kpi-sub">
+                                {latest?.awake_minutes ?? 0}m awake during night
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="sleep-kpi-card">
+                        <div className="sleep-kpi-icon-wrap quality">
+                            <Star size={22} />
+                        </div>
+                        <div className="sleep-kpi-info">
+                            <span className="sleep-kpi-label">Quality &amp; Restedness</span>
+                            <div className="sleep-kpi-val quality-val">
+                                {latest?.quality ? `${latest.quality}/5 ★` : "—"}
+                            </div>
+                            <span className="sleep-kpi-sub">
+                                {latest?.restedness ? restedLabels[latest.restedness] : "Unrated"}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="sleep-kpi-card">
+                        <div className="sleep-kpi-icon-wrap weekly">
+                            <TrendingUp size={22} />
+                        </div>
+                        <div className="sleep-kpi-info">
+                            <span className="sleep-kpi-label">Weekly Consistency</span>
+                            <div className="sleep-kpi-val">
+                                {analytics?.avg_sleep_duration_hours ?? 0} <small>hrs avg</small>
+                            </div>
+                            <span className="sleep-kpi-sub">
+                                {analytics?.goal_achievement_rate ?? 0}% goal rate ({analytics?.total_logged_nights ?? 0} nights)
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Main 2-Column Grid */}
                 <div className="sleep-grid-main">
                     {/* Left Column: Latest Sleep & Weekly Analytics */}

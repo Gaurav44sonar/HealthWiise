@@ -496,6 +496,67 @@ export default function Fitness() {
                     </div>
                 )}
 
+                {/* Top Executive KPI Metric Cards */}
+                <div className="fitness-kpi-grid">
+                    <div className="fitness-kpi-card">
+                        <div className="fitness-kpi-icon-wrap time">
+                            <Clock size={22} />
+                        </div>
+                        <div className="fitness-kpi-info">
+                            <span className="fitness-kpi-label">Active Time Today</span>
+                            <div className="fitness-kpi-val">
+                                {today?.total_minutes_today ?? 0} <small>mins</small>
+                            </div>
+                            <span className="fitness-kpi-sub">
+                                {today?.daily_goal_reached ? "Target reached 🎉" : `Target: ${today?.daily_goal_minutes ?? 45}m (${today?.daily_progress_percentage ?? 0}%)`}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="fitness-kpi-card">
+                        <div className="fitness-kpi-icon-wrap calorie">
+                            <Flame size={22} />
+                        </div>
+                        <div className="fitness-kpi-info">
+                            <span className="fitness-kpi-label">Energy Burned Today</span>
+                            <div className="fitness-kpi-val calorie-val">
+                                {(today?.total_calories_burned_today ?? 0).toLocaleString()} <small>kcal</small>
+                            </div>
+                            <span className="fitness-kpi-sub">ML Gym Dataset Model</span>
+                        </div>
+                    </div>
+
+                    <div className="fitness-kpi-card">
+                        <div className="fitness-kpi-icon-wrap session">
+                            <Trophy size={22} />
+                        </div>
+                        <div className="fitness-kpi-info">
+                            <span className="fitness-kpi-label">Workouts Logged</span>
+                            <div className="fitness-kpi-val">
+                                {today?.session_count_today ?? 0} <small>{today?.session_count_today === 1 ? "session" : "sessions"}</small>
+                            </div>
+                            <span className="fitness-kpi-sub">
+                                {weekly?.session_count ?? 0} workouts this week
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="fitness-kpi-card">
+                        <div className="fitness-kpi-icon-wrap weekly">
+                            <Target size={22} />
+                        </div>
+                        <div className="fitness-kpi-info">
+                            <span className="fitness-kpi-label">Weekly Active Goal</span>
+                            <div className="fitness-kpi-val">
+                                {weekly?.total_hours ?? 0} <small>hrs</small>
+                            </div>
+                            <span className="fitness-kpi-sub">
+                                {weekly?.minutes_progress_percentage ?? 0}% of {goals?.weekly_active_minutes_goal ?? 180}m target
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Main 2-Column Layout */}
                 <div className="fitness-grid-main">
                     {/* Left Column: Today's Summary, Goals, Weekly Stats */}
