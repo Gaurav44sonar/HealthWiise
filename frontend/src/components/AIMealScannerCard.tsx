@@ -353,7 +353,7 @@ export default function AIMealScannerCard({
                             {scanning ? (
                                 <>
                                     <Loader2 size={16} className="ai-spinner" />
-                                    <span>Scanning with Gemini 2.5 Flash...</span>
+                                    <span>Scanning....</span>
                                 </>
                             ) : (
                                 <>

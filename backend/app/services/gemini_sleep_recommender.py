@@ -17,17 +17,14 @@ logger = logging.getLogger(__name__)
 # Primary and fallback model names for Gemini Flash
 GEMINI_MODELS = [
     "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
 ]
 
 
 def clean_json_response(raw_text: str) -> list[dict]:
-    """Extract and parse a JSON array from model output."""
+    """Extract and parse a JSON array from model output cleanly and defensively."""
     text = raw_text.strip()
-    if text.startswith("```"):
-        text = re.sub(r"^```(?:json)?\s*", "", text)
-        text = re.sub(r"\s*```$", "", text)
+    text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.MULTILINE)
+    text = re.sub(r"\s*```$", "", text, flags=re.MULTILINE)
     text = text.strip()
 
     # Find array brackets
@@ -36,12 +33,54 @@ def clean_json_response(raw_text: str) -> list[dict]:
     if start != -1 and end != -1 and end > start:
         text = text[start : end + 1]
 
-    parsed = json.loads(text)
-    if isinstance(parsed, list):
-        return parsed
-    if isinstance(parsed, dict) and "recommendations" in parsed:
-        return parsed["recommendations"]
-    return []
+    # Attempt 1: Direct JSON parsing
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, list):
+            return parsed
+        if isinstance(parsed, dict) and "recommendations" in parsed:
+            return parsed["recommendations"]
+    except Exception:
+        pass
+
+    # Attempt 2: Clean trailing commas and whitespace
+    cleaned = re.sub(r",\s*([}\]])", r"\1", text)
+    try:
+        parsed = json.loads(cleaned)
+        if isinstance(parsed, list):
+            return parsed
+        if isinstance(parsed, dict) and "recommendations" in parsed:
+            return parsed["recommendations"]
+    except Exception:
+        pass
+
+    # Attempt 3: Regex extraction of individual recommendation blocks
+    recs: list[dict[str, Any]] = []
+    blocks = re.finditer(r'\{[^{}]*"title"\s*:\s*["\']([^"\']+)["\'][^{}]*\}', text)
+    for idx, match in enumerate(blocks, start=1):
+        block_text = match.group(0)
+        try:
+            item = json.loads(block_text)
+            recs.append(item)
+        except Exception:
+            # Extract fields with regex
+            title_m = re.search(r'"title"\s*:\s*["\']([^"\']+)["\']', block_text)
+            exp_m = re.search(r'"explanation"\s*:\s*["\']([^"\']+)["\']', block_text)
+            trig_m = re.search(r'"triggered_by"\s*:\s*["\']([^"\']+)["\']', block_text)
+            act_m = re.search(r'"action"\s*:\s*["\']([^"\']+)["\']', block_text)
+            cat_m = re.search(r'"category"\s*:\s*["\'](duration|consistency|quality|recovery|habits)["\']', block_text)
+            if title_m:
+                recs.append({
+                    "id": f"ai_rec_gen_{idx}",
+                    "title": title_m.group(1),
+                    "explanation": exp_m.group(1) if exp_m else "Personalized sleep insight based on recorded patterns.",
+                    "triggered_by": trig_m.group(1) if trig_m else "Recorded sleep analytics.",
+                    "action": act_m.group(1) if act_m else "Maintain a consistent sleep window.",
+                    "category": cat_m.group(1) if cat_m else "duration",
+                    "data_sufficient": True,
+                })
+
+    return recs
 
 
 def generate_dynamic_fallback_recommendations(
@@ -63,7 +102,6 @@ def generate_dynamic_fallback_recommendations(
     cons_level = consistency.get("consistency_level", "Moderate")
     score = prediction.get("estimated_sleep_quality") if prediction else None
     gender = user.get("dashboard_type", "wellness")
-    name = user.get("name", "Friend")
 
     recs = []
 
@@ -280,16 +318,20 @@ Generate exactly 4 personalized, highly practical, non-generic sleep recommendat
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
-                "temperature": 0.4,
+                "temperature": 0.3,
                 "topP": 0.8,
-                "maxOutputTokens": 1024,
+                "maxOutputTokens": 4096,
+                "responseMimeType": "application/json",
+                "thinkingConfig": {
+                    "thinkingBudget": 0,
+                },
             },
         }
 
         try:
             data = None
             if httpx is not None:
-                async with httpx.AsyncClient(timeout=12.0) as client:
+                async with httpx.AsyncClient(timeout=20.0) as client:
                     res = await client.post(url, json=payload)
                     if res.status_code == 200:
                         data = res.json()
@@ -304,7 +346,7 @@ Generate exactly 4 personalized, highly practical, non-generic sleep recommendat
                         headers={"Content-Type": "application/json"},
                         method="POST",
                     )
-                    with urllib.request.urlopen(req, timeout=12) as response:
+                    with urllib.request.urlopen(req, timeout=20) as response:
                         return json.loads(response.read().decode("utf-8"))
 
                 data = await asyncio.to_thread(_urllib_post)
