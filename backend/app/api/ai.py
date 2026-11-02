@@ -20,6 +20,8 @@ from app.services.ai_sleep_service import (
     generate_rule_recommendations,
 )
 from app.services.gemini_sleep_recommender import generate_gemini_sleep_recommendations
+from app.schemas.ai_nutrition import MealScanRequest, MealScanResponse
+from app.services.gemini_nutrition_service import scan_meal_with_gemini
 
 router = APIRouter(prefix="/ai", tags=["AI & Machine Learning Insights"])
 
@@ -52,6 +54,40 @@ async def predict_sleep_quality_endpoint(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Sleep quality prediction failed: {str(e)}",
+        )
+
+
+@router.post(
+    "/nutrition/scan",
+    response_model=MealScanResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def scan_meal_endpoint(
+    payload: MealScanRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Multimodal meal analysis using Gemini 2.5 Flash Vision & NLP.
+    Takes an image (base64) or natural text description to estimate calories,
+    macros, detected food items, and clinical health guidance.
+    """
+    if not payload.text_description and not payload.image_base64:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Please provide either a meal photo or a text description to analyze.",
+        )
+
+    try:
+        result = await scan_meal_with_gemini(
+            text_description=payload.text_description,
+            image_base64=payload.image_base64,
+            mime_type=payload.mime_type,
+        )
+        return result
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"AI meal analysis failed: {str(exc)}",
         )
 
 
